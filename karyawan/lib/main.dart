@@ -61,7 +61,10 @@ class MyHomePage extends StatelessWidget {
                         Text("Umur : ${snapshot.data![index].umur} tahun"),
                         Text(
                             "Alamat : ${snapshot.data![index].alamat.jalan}, ${snapshot.data![index].alamat.kota}, ${snapshot.data![index].alamat.provinsi},"),
-                        Text("Hobby : ${snapshot.data![index].hoby}"),
+                        // if(snapshot.data![index].hobi.length > 1){
+                        //   Text("Hobby : ${snapshot.data![index].hobi[0]}"),
+                        // }
+                        Text("Hobby : ${snapshot.data![index].hobi[0]}"),
                       ],
                     ),
                   );
