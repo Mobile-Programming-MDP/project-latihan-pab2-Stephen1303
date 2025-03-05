@@ -3,7 +3,6 @@ import 'package:aplikasi_pilem/models/movie.dart';
 import 'package:aplikasi_pilem/screens/detail_screen.dart';
 import 'package:aplikasi_pilem/services/api_service.dart';
 
-
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
   @override
@@ -14,7 +13,7 @@ class SearchScreenState extends State<SearchScreen> {
   final ApiService _apiService = ApiService();
   final TextEditingController _searchController = TextEditingController();
   List<Movie> _searchResults = [];
-  
+
   @override
   void initState() {
     super.initState();
@@ -34,9 +33,10 @@ class SearchScreenState extends State<SearchScreen> {
       });
       return;
     }
-    final List<Map<String, dynamic>> searchData = await _apiService.searchMovies(_searchController.text);
+    final List<Map<String, dynamic>> searchData =
+        await _apiService.searchMovies(_searchController.text);
     setState(() {
-    _searchResults = searchData.map((e) => Movie.fromJson(e)).toList();
+      _searchResults = searchData.map((e) => Movie.fromJson(e)).toList();
     });
   }
 
@@ -102,9 +102,11 @@ class SearchScreenState extends State<SearchScreen> {
                       ),
                       title: Text(movie.title),
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(
-                          builder: (context) => DetailScreen(movie:movie),
-                        ));
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailScreen(movie: movie),
+                            ));
                       },
                     ),
                   );

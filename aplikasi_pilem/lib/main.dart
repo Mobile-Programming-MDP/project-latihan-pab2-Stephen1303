@@ -1,4 +1,6 @@
+import 'package:aplikasi_pilem/screens/favorite_screen.dart';
 import 'package:aplikasi_pilem/screens/home_screen.dart';
+import 'package:aplikasi_pilem/screens/search_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
