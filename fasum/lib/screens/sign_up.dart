@@ -1,3 +1,4 @@
+import 'package:fasum/screens/sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -53,7 +54,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _registerAccount() async{
-    if(_passwordController.text != _confirmPasswordController){
+    if(_passwordController.text != _confirmPasswordController.text){
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Password dan Konfirmasi Password tidak sama")
@@ -70,7 +71,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if(mounted){
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const SignUpScreen()
+            builder: (context) => const SignInScreen()
           )
         );
       }
