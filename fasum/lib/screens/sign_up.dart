@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -49,5 +50,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
       ),
     );
+  }
+
+  void _registerAccount() async{
+    if(_passwordController.text != _confirmPasswordController){
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password dan Konfirmasi Password tidak sama")
+        )
+      );
+      return;
+    }
+
+    try{
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text
+      );
+      if(mounted){
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const SignUpScreen()
+          )
+        );
+      }
+    } on FirebaseAuthException catch (e){
+      if(mounted){
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mendaftar: ${e.message}')
+          )
+        );
+      }
+    }
   }
 }
