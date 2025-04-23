@@ -66,4 +66,5 @@ class DefaultFirebaseOptions {
     projectId: 'fasum-apps-f376d',
     storageBucket: 'fasum-apps-f376d.firebasestorage.app',
   );
+
 }
