@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fasum/screens/add_post_screen.dart';
+import 'package:fasum/screens/detail_screen.dart';
 import 'package:fasum/screens/sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -67,66 +68,90 @@ class HomeScreen extends StatelessWidget {
               final description = data['description'];
               final createdAtStr = data['createdAt'];
               final fullName = data['fullName'] ?? 'Anonim';
+              final latitude = data['latitude'];
+              final longitude = data['longitude'];
+              final category = data['category'];
 
               //parse ke DateTime
               final createdAt = DateTime.parse(createdAtStr);
-              return Card(
-                margin: const EdgeInsets.all(10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (imageBase64 != null)
-                      ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(10),
+              String heroTag =
+                  'fasum-image-${createdAt.millisecondsSinceEpoch}';
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:(context) => DetailScreen(
+                          imageBase64: imageBase64,
+                          description: description,
+                          createdAt: createdAt,
+                          fullName: fullName,
+                          latitude: latitude,
+                          longitude: longitude,
+                          category: category,
+                          heroTag: heroTag,
                         ),
-                        child: Image.memory(
-                          base64Decode(imageBase64),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: 200,
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 10,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                formatTime(createdAt),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              Text(
-                                fullName,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            description ?? '',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
                     ),
-                  ],
+                  );
+                },
+                child: Card(
+                  margin: const EdgeInsets.all(10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (imageBase64 != null)
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(10),
+                          ),
+                          child: Image.memory(
+                            base64Decode(imageBase64),
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 200,
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 10,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  formatTime(createdAt),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                Text(
+                                  fullName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              description ?? '',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
