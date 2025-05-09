@@ -4,21 +4,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fasum/screens/add_post_screen.dart';
 import 'package:fasum/screens/detail_screen.dart';
 import 'package:fasum/screens/edit_post_screen.dart';
-import 'package:fasum/screens/mypost_screen.dart';
 import 'package:fasum/screens/sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class MyPostScreen extends StatefulWidget {
+  const MyPostScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<MyPostScreen> createState() => _MyPostScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _MyPostScreenState extends State<MyPostScreen> {
   String? selectedCategory;
   List<String> categories = [
     'Jalan Rusak',
@@ -60,63 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const SignInScreen()),
     );
-  }
-
-  void _showCategoryFilter() async {
-    final result = await showModalBottomSheet<String?>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.75,
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 24),
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.clear),
-                  title: const Text('Semua Kategori'),
-                  onTap:
-                      () => Navigator.pop(
-                        context,
-                        null,
-                      ), // Null untuk memilih semua kategori
-                ),
-                const Divider(),
-                ...categories.map(
-                  (category) => ListTile(
-                    title: Text(category),
-                    trailing:
-                        selectedCategory == category
-                            ? Icon(
-                              Icons.check,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                            : null,
-                    onTap: () => Navigator.pop(context, category),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    if (result != null) {
-      setState(() {
-        selectedCategory =
-            result; // Set kategori yang dipilih atau null untuk Semua Kategori
-      });
-    } else {
-      // Jika result adalah null, berarti memilih Semua Kategori
-      setState(() {
-        selectedCategory =
-            null; // Reset ke null untuk menampilkan semua kategori
-      });
-    }
   }
 
   //like post
@@ -321,13 +263,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Home"),
+        title: const Text("My Post"),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            onPressed: _showCategoryFilter,
-            icon: const Icon(Icons.filter_list),
-          ),
+          // IconButton(
+          //   onPressed: _showCategoryFilter,
+          //   icon: const Icon(Icons.filter_list),
+          // ),
           IconButton(
             onPressed: () {
               signOut(context);
@@ -350,22 +292,15 @@ class _HomeScreenState extends State<HomeScreen> {
             if (!snapshot.hasData)
               return const Center(child: CircularProgressIndicator());
 
-            final cu = FirebaseAuth.instance.currentUser;
             final posts =
                 snapshot.data!.docs.where((doc) {
                   final data = doc.data();
-                  final category = data['category'] ?? 'Lainnya';
-                  // return cu?.uid != data['userId'] &&
-                  //     (selectedCategory == null ||
-                  //         selectedCategory == category);
-                  return selectedCategory == null ||
-                      selectedCategory == category;
+                  final cu = FirebaseAuth.instance.currentUser;
+                  return cu?.uid == data['userId'];
                 }).toList();
 
             if (posts.isEmpty) {
-              return const Center(
-                child: Text("Tidak ada laporan untuk kategori ini"),
-              );
+              return const Center(child: Text("Anda belum membuat laporan"));
             }
 
             //Script lengkap bagian ListView.builder
@@ -644,15 +579,6 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // FloatingActionButton(
-          //   onPressed: () {
-          //     Navigator.of(
-          //       context,
-          //     ).push(MaterialPageRoute(builder: (context) => MyPostScreen()));
-          //   },
-          //   child: const Icon(Icons.library_add),
-          // ),
-          SizedBox(height: 8),
           FloatingActionButton(
             onPressed: () {
               Navigator.of(
