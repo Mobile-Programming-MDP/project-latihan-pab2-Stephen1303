@@ -7,7 +7,6 @@ import 'package:fasum/screens/edit_post_screen.dart';
 import 'package:fasum/screens/mypost_screen.dart';
 import 'package:fasum/screens/sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -19,7 +18,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String? _currentUserId;
   String? selectedCategory;
+  //ambil dari add_post_screen
   List<String> categories = [
     'Jalan Rusak',
     'Marka Pudar',
@@ -62,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  //ambil dari https://pastebin.com/8BXgdv3M
   void _showCategoryFilter() async {
     final result = await showModalBottomSheet<String?>(
       context: context,
@@ -116,6 +118,34 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedCategory =
             null; // Reset ke null untuk menampilkan semua kategori
       });
+    }
+  }
+
+  //hapus data
+  Future<void> _deletePost(String postId) async {
+    final confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi'),
+          content: const Text('Apakah Anda yakin ingin menghapus laporan ini?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Tidak'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Ya'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmDelete == true && mounted) {
+      // Implement delete functionality
+      FirebaseFirestore.instance.collection("posts").doc(postId).delete();
     }
   }
 
@@ -290,30 +320,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _deletePost(String postId) async {
-    final confirmDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Konfirmasi'),
-          content: const Text('Apakah Anda yakin ingin menghapus laporan ini?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Tidak'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Ya'),
-            ),
-          ],
-        );
-      },
-    );
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _getPostsStream() {
+    if (selectedCategory == null) {
+      // Return all posts if no category is selected
+      print("Filter by user id ${_currentUserId}");
+      return FirebaseFirestore.instance
+          .collection("posts")
+          .where("userId", isNotEqualTo: _currentUserId)
+          .orderBy('createdAt', descending: true)
+          .snapshots();
+    } else {
+      // Return posts filtered by the selected category
+      print("Filter by Category ${selectedCategory}");
+      return FirebaseFirestore.instance
+          .collection("posts")
+          .where("category", isEqualTo: selectedCategory)
+          .orderBy('createdAt', descending: true)
+          .snapshots();
+    }
+  }
 
-    if (confirmDelete == true && mounted) {
-      // Implement delete functionality
-      FirebaseFirestore.instance.collection("posts").doc(postId).delete();
+  @override
+  void initState() {
+    super.initState();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      _currentUserId = currentUser.uid;
     }
   }
 
@@ -341,30 +373,41 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {});
         },
         child: StreamBuilder(
-          stream:
-              FirebaseFirestore.instance
-                  .collection("posts")
-                  .orderBy("createdAt", descending: true)
-                  .snapshots(),
+          key: const ValueKey("postsStream"),
+          stream: _getPostsStream(),
           builder: (context, snapshot) {
-            if (!snapshot.hasData)
-              return const Center(child: CircularProgressIndicator());
+            print("Start");
+            //print("Data " + snapshot.data!.docs.length.toString());
+            print("Has Data ${snapshot.hasData}");
+            print("Category ${selectedCategory}");
+            //print("Has Data ${snapshot.hasData}");
+            //print(snapshot.data?.docs);
 
-            final cu = FirebaseAuth.instance.currentUser;
-            final posts =
-                snapshot.data!.docs.where((doc) {
-                  final data = doc.data();
-                  final category = data['category'] ?? 'Lainnya';
-                  // return cu?.uid != data['userId'] &&
-                  //     (selectedCategory == null ||
-                  //         selectedCategory == category);
-                  return selectedCategory == null ||
-                      selectedCategory == category;
-                }).toList();
+            if (snapshot.hasError) {
+              print("Trapped in has error ${!snapshot.hasData}");
+              print("${snapshot.error}");
+
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              print("Trapped in Laoding Data ${!snapshot.hasData}");
+              //print("Data " + snapshot.data!.docs.length.toString());
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final posts = snapshot.data!.docs;
+            //.where((doc) {
+            //   final data = doc.data();
+            //   final category = data['category'] ?? 'Lainnya';
+            //   return true;
+            //   //return selectedCategory == null || selectedCategory == category;
+            // });
+            //.toList();
 
             if (posts.isEmpty) {
               return const Center(
-                child: Text("Tidak ada laporan untuk kategori ini"),
+                child: Text("Tidak ada laporan untuk kategori ini!"),
               );
             }
 
@@ -377,14 +420,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 final imageBase64 = data['image'];
                 final description = data['description'];
                 final createdAtStr = data['createdAt'];
-                final fullName = data['fullname'] ?? 'Anonim';
+                final fullName = data['fullName'] ?? 'Anonim';
                 final latitude = data['latitude'];
                 final longitude = data['longitude'];
-                final category = data['category'];
-
-                final currentUser = FirebaseAuth.instance.currentUser;
+                final category = data['category'] ?? 'Lainnya';
                 final userId = data['userId'] ?? "";
-
                 //parse ke DateTime
                 final createdAt = DateTime.parse(createdAtStr);
                 String heroTag =
@@ -436,29 +476,37 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Column(
+                              Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    formatTime(createdAt),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        formatTime(createdAt),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      Text(
+                                        fullName,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(category),
+                                    ],
                                   ),
-                                  Text(
-                                    fullName,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-
-                                  //Like Button
                                   Row(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
+                                      //Like Button
                                       Row(
                                         children: [
                                           GestureDetector(
@@ -473,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               color:
                                                   (data['likes'] ?? [])
                                                           .contains(
-                                                            currentUser?.uid,
+                                                            _currentUserId,
                                                           )
                                                       ? Colors.blue
                                                       : Colors.grey,
@@ -508,7 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               color:
                                                   (data['comments'] ?? [])
                                                           .contains(
-                                                            currentUser?.uid,
+                                                            _currentUserId,
                                                           )
                                                       ? Colors.blue
                                                       : Colors.grey,
@@ -529,21 +577,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                         ],
                                       ),
-                                    ],
-                                  ),
 
-                                  //Menu Edit dan Hapus
-                                  if (currentUser != null &&
-                                      currentUser.uid == userId)
-                                    Row(
-                                      children: [
-                                        const SizedBox(width: 8),
-                                        GestureDetector(
-                                          onTap: () {
-                                            showModalBottomSheet(
-                                              context: context,
-                                              shape:
-                                                  const RoundedRectangleBorder(
+                                      //Menu Edit dan Hapus
+                                      if (_currentUserId == userId)
+                                        Row(
+                                          children: [
+                                            const SizedBox(width: 8),
+                                            GestureDetector(
+                                              onTap: () {
+                                                showModalBottomSheet(
+                                                  context: context,
+                                                  shape: const RoundedRectangleBorder(
                                                     borderRadius:
                                                         BorderRadius.vertical(
                                                           top: Radius.circular(
@@ -551,77 +595,78 @@ class _HomeScreenState extends State<HomeScreen> {
                                                           ),
                                                         ),
                                                   ),
-                                              builder: (context) {
-                                                return SafeArea(
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      //Menu Edit
-                                                      ListTile(
-                                                        leading: const Icon(
-                                                          Icons.edit,
-                                                        ),
-                                                        title: const Text(
-                                                          'Edit',
-                                                        ),
-                                                        onTap: () {
-                                                          Navigator.pop(
-                                                            context,
-                                                          ); //close the modal
-
-                                                          // Navigate to edit screen or implement edit functionality
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder:
-                                                                  (
-                                                                    context,
-                                                                  ) => EditPostScreen(
-                                                                    postId:
-                                                                        posts[index]
-                                                                            .id,
-                                                                    imageBase64:
-                                                                        imageBase64,
-                                                                    description:
-                                                                        description,
-                                                                    category:
-                                                                        category,
-                                                                  ),
+                                                  builder: (context) {
+                                                    return SafeArea(
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          //Menu Edit
+                                                          ListTile(
+                                                            leading: const Icon(
+                                                              Icons.edit,
                                                             ),
-                                                          );
-                                                        },
+                                                            title: const Text(
+                                                              'Edit',
+                                                            ),
+                                                            onTap: () {
+                                                              Navigator.pop(
+                                                                context,
+                                                              ); //close the modal
+
+                                                              // Navigate to edit screen or implement edit functionality
+                                                              Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                  builder:
+                                                                      (
+                                                                        context,
+                                                                      ) => EditPostScreen(
+                                                                        postId:
+                                                                            posts[index].id,
+                                                                        imageBase64:
+                                                                            imageBase64,
+                                                                        description:
+                                                                            description,
+                                                                        category:
+                                                                            category,
+                                                                      ),
+                                                                ),
+                                                              );
+                                                            },
+                                                          ),
+                                                          //Menu Hapus
+                                                          ListTile(
+                                                            leading: const Icon(
+                                                              Icons.delete,
+                                                            ),
+                                                            title: const Text(
+                                                              'Delete',
+                                                            ),
+                                                            onTap: () async {
+                                                              Navigator.pop(
+                                                                context,
+                                                              );
+                                                              _deletePost(
+                                                                posts[index].id,
+                                                              );
+                                                            },
+                                                          ),
+                                                        ],
                                                       ),
-                                                      //Menu Hapus
-                                                      ListTile(
-                                                        leading: const Icon(
-                                                          Icons.delete,
-                                                        ),
-                                                        title: const Text(
-                                                          'Delete',
-                                                        ),
-                                                        onTap: () async {
-                                                          Navigator.pop(
-                                                            context,
-                                                          );
-                                                          _deletePost(
-                                                            posts[index].id,
-                                                          );
-                                                        },
-                                                      ),
-                                                    ],
-                                                  ),
+                                                    );
+                                                  },
                                                 );
                                               },
-                                            );
-                                          },
-                                          child: const Icon(
-                                            Icons.more_vert,
-                                            size: 20,
-                                          ),
+                                              child: const Icon(
+                                                Icons.more_vert,
+                                                size: 20,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                    ],
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 6),
@@ -642,18 +687,20 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // FloatingActionButton(
-          //   onPressed: () {
-          //     Navigator.of(
-          //       context,
-          //     ).push(MaterialPageRoute(builder: (context) => MyPostScreen()));
-          //   },
-          //   child: const Icon(Icons.library_add),
-          // ),
-          SizedBox(height: 8),
           FloatingActionButton(
+            heroTag: "myPostButton",
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (context) => MyPostsScreen()));
+            },
+            child: const Icon(Icons.person),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            heroTag: "addPostButton",
             onPressed: () {
               Navigator.of(
                 context,
